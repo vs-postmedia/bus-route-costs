@@ -2,28 +2,23 @@
     // COMPONENTS
     import { onMount } from 'svelte';
     import { csvParse } from 'd3-dsv';
-    import Chart from "$components/Chart.svelte";
     import Map from "$components/Map.svelte";
-    import Select from "svelte-select"; // https://github.com/rob-balfre/svelte-select
 
     
 
     // DATA
     // import data from "$data/data.js";
-    import { menuItems } from "$data/menu-items";
-    const dataUrl = 'https://raw.githubusercontent.com/ajstarks/dubois-data-portraits/master/challenge/2024/challenge03/data.csv';
+    import busRoutes from '$data/bus-routes.js';
     const mapDataUrl = 'https://vs-postmedia-data.sfo2.digitaloceanspaces.com/misc/mobi-top-bike-data.csv';
 
     // VARIABLES
-    let data, mapData, value;
-    const defaultSelectValue = menuItems[0].value;
+    let mapData;
     
     // create .env in root dir & add VITE_MAPTILER_API_KEY for Map.svelte
     const apiKey = import.meta.env.VITE_MAPTILER_API_KEY;
 
-
+    console.log(busRoutes[0])
     // REACTIVE VARIABLES
-    $: value, updateData(value);
 
     async function fetchData(url) {
         const resp = await fetch(url);
@@ -33,23 +28,11 @@
     }
 
 
-    function updateData(value) {
-        if (!value || !value.value) return;
-
-        console.log(value);
-    }
-
     async function init() {
-        // fetch remote data
-        data = await fetchData(dataUrl);
-
         // fetch map data
         mapData = await fetchData(mapDataUrl);
-        
-        // default display selector value
-		value = defaultSelectValue;
 
-        console.log(mapData)
+        // console.log(mapData)
     }
 
     onMount(init);
@@ -61,22 +44,11 @@
 </header>
 
 <main>
-    <Select items={menuItems}
-        bind:value
-        change={updateData}
-        placeholder="Pick a city..."
-		showChevron="true"
-		listOpen={false}
-    />
-    
-    <Chart 
-        data={data}
-        value={value}
-    />
     {#if mapData}
         <Map
             apiKey={apiKey}
             data={mapData}
+            lineData={busRoutes[0]}
         />
     {/if}
 </main>
