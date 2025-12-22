@@ -37,7 +37,7 @@
 
 <header>
     <h1>VS SvelteKit Template</h1>
-    <p class="subhead">Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+    <p class="subhead">Per rider costs for TransLink bus routes.</p>
 </header>
 
 <main>
@@ -52,7 +52,7 @@
 
 <footer>
     <p class="note">NOTE: tk.</p>
-    <p class="source">Source:  <a href="https:vancouversun.com" target="_blank">TK</a></p>
+    <p class="source">Source:  <a href="https://www.translink.ca/plans-and-projects/strategies-plans-and-guidelines/managing-the-transit-network#2024-transit-service-performance-review" target="_blank">TransLink</a>, Postmedia analysis</p>
 </footer>
   
 <style>
