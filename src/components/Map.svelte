@@ -10,13 +10,16 @@
     export let apiKey;
     
     
-    console.log(lineData)
-    
     let map;
+    let popup = null;
     let mapContainer;
     let costBuckets = [];
+    let searchQuery = '';
+    let filteredRoutes = [];
+    let showDropdown = false;
 
     const mapZoom = 9;
+    const searchResultLimit = 5;
     const lineColour = '#0062A3';
     const MAP_STYLE = `https://api.maptiler.com/maps/dataviz/style.json?key=${apiKey}`;
 
@@ -29,6 +32,10 @@
         '#E35D42'  // Red - highest cost
     ];
 
+    
+    /*
+    ** REACTIVE VARIABLES
+    */
     // Calculate cost buckets from lineData
     $: if (lineData && lineData.features && lineData.features.length > 0) {
             const costs = lineData.features.map(f => Number(f.properties.cost_per_rider));
@@ -55,17 +62,7 @@
                     costBuckets[3], colorScale[4]
                 ]);
             }
-        }
-
-
-
-    // Calculate map center from stations
-    // $: mapCenter = data.length > 0 
-    //     ? [
-    //         data.reduce((sum, d) => sum + Number(d.lon), 0) / data.length,
-    //         data.reduce((sum, d) => sum + Number(d.lat), 0) / data.length
-    //     ]
-    //     : [-123.12, 49.27];
+    }
     
     // calculate map centre from bbox of lines
     $: mapCenter = lineData && lineData.features && lineData.features.length > 0
@@ -92,9 +89,84 @@
     })()
     : [-123.12, 49.27];
 
-    onMount(() => {
-        let popup = null;
+    // Filter routes based on search query
+    $: if (lineData && lineData.features) {
+        if (searchQuery.trim()) {
+            filteredRoutes = lineData.features.filter(feature => 
+                feature.properties.route_short_name
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase())
+            )
+            // sort numerically
+            .sort((a, b) => {
+                const numA = parseInt(a.properties.route_short_name);
+                const numB = parseInt(b.properties.route_short_name);
+                return numA - numB;
+            })
+             // Limit to XX results
+            .slice(0, searchResultLimit);
+            
+            showDropdown = filteredRoutes.length > 0;
+        } else {
+            filteredRoutes = [];
+            showDropdown = false;
+        }
+    }
 
+    
+    /*
+    ** FUNCTIONS
+    */
+
+    // Function to show popup for a route when searched via searchbar
+    function showRoutePopup(feature) {
+        if (!map || !feature) return;
+
+        // Get the center of the route's coordinates
+        const coords = feature.geometry.coordinates;
+        const centerIndex = Math.floor(coords.length / 2);
+        const centerCoord = coords[centerIndex];
+        const coordinates = centerCoord[0]; // [lon, lat]
+
+        const { route_short_name, route_long_name, cost_per_rider } = feature.properties;
+
+        // Create a container for the Svelte component
+        const popupContainer = document.createElement('div');
+
+        // Mount the tooltip
+        new MapTooltip({
+            target: popupContainer,
+            props: {
+                route_short_name: route_short_name,
+                route_long_name: route_long_name,
+                cost_per_rider: `$${cost_per_rider}`
+            }
+        });
+
+        // Remove existing popup if any
+        if (popup) {
+            popup.remove();
+        }
+
+        popup = new Maplibregl.Popup({ closeButton: true })
+            .setLngLat(coordinates)
+            .setDOMContent(popupContainer)
+            .addTo(map);
+
+        // Fly to the route
+        map.flyTo({
+            center: coordinates,
+            zoom: 13,
+            duration: 1000
+        });
+
+        // Clear search
+        searchQuery = '';
+        showDropdown = false;
+    }
+
+
+    onMount(() => {
         map = new Maplibregl.Map({
             container: mapContainer,
             style: MAP_STYLE,
@@ -180,10 +252,10 @@
             // Change cursor back on leave
             map.getCanvas().style.cursor = '';
             
-            // if (popup) {
-            //     popup.remove();
-            //     popup = null;
-            // }
+            if (popup) {
+                popup.remove();
+                popup = null;
+            }
         });
     });
     });
@@ -196,6 +268,26 @@
 </script>
 
 <div class="container">
+    <div class="search-container">
+        <input
+            type="text"
+            placeholder="Lookup a bus route..."
+            bind:value={searchQuery}
+            class="search-input"
+        />
+        {#if showDropdown}
+            <div class="dropdown">
+                {#each filteredRoutes as route}
+                    <button 
+                        class="dropdown-item"
+                        on:click={() => showRoutePopup(route)}
+                    >
+                        <strong>{route.properties.route_short_name}</strong> - {route.properties.route_long_name}
+                    </button>
+                {/each}
+            </div>
+        {/if}
+    </div>
     <div bind:this={mapContainer} class="map"></div>
 </div>
 
@@ -232,35 +324,59 @@
         font-size: 1.2rem;
     }
 
-    .controls {
+     .search-container {
         position: absolute;
-        top: 80px;
+        top: 10px;
         left: 10px;
-        display: flex;
-        gap: 10px;
-        align-items: center;
         z-index: 1;
+        width: 300px;
     }
 
-    .btn {
-        padding: 4px 8px;
+    .search-input {
+        width: 100%;
+        padding: 10px 12px;
         border: none;
         border-radius: 6px;
-        background: #6D8EBF;
-        color: #FFF;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        font-size: 14px;
+        font-family: 'BentonSansCond-Reg', sans-serif;
+    }
+
+    .search-input:focus {
+        outline: 2px solid #0062A3;
+    }
+
+    .dropdown {
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        margin-top: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .dropdown-item {
+        width: 100%;
+        padding: 10px 12px;
+        border: none;
+        background: white;
+        text-align: left;
         cursor: pointer;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: background 0.2s;
-        }
+        font-size: 14px;
+        font-family: 'BentonSansCond-Reg', sans-serif;
+        border-bottom: 1px solid #f0f0f0;
+    }
 
-        .btn:hover {
-            background: #0062A3;
-        }
+    .dropdown-item:hover {
+        background: #f5f5f5;
+    }
 
-        .info {
-            /* font-size: 14px; */
-            color: #231F20;
-            font-weight: 500;
-        }
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item strong {
+        color: #0062A3;
+    }
 </style>

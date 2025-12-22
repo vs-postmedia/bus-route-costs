@@ -17,9 +17,6 @@
     // create .env in root dir & add VITE_MAPTILER_API_KEY for Map.svelte
     const apiKey = import.meta.env.VITE_MAPTILER_API_KEY;
 
-    console.log(busRoutes[0])
-    // REACTIVE VARIABLES
-
     async function fetchData(url) {
         const resp = await fetch(url);
         const data = await resp.text();

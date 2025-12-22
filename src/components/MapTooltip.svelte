@@ -2,7 +2,7 @@
     export let route_short_name;
     export let route_long_name;
     export let cost_per_rider;
-    export let routeColor;
+    // export let routeColor;
 </script>
 
 <div class="popup-content">
