@@ -36,8 +36,8 @@
 </script>
 
 <header>
-    <h1>VS SvelteKit Template</h1>
-    <p class="subhead">Per rider costs for TransLink bus routes.</p>
+    <h1>Average cost per passenger to operate TransLink bus routes.</h1>
+    <p class="subhead"></p>
 </header>
 
 <main>
@@ -51,7 +51,7 @@
 </main>
 
 <footer>
-    <p class="note">NOTE: tk.</p>
+    <p class="note">NOTE: Cost per passenger was calculated by dividing the hourly cost to operate a bus by the average number of passengers per hour in 2024. TransLink provided hourly costs for shuttle buses and an average hourly cost for all other bus types (standard, articulated, etc.).</p>
     <p class="source">Source:  <a href="https://www.translink.ca/plans-and-projects/strategies-plans-and-guidelines/managing-the-transit-network#2024-transit-service-performance-review" target="_blank">TransLink</a>, Postmedia analysis</p>
 </footer>
   
@@ -65,7 +65,7 @@
 		margin-bottom: 2rem;
 	}
 	header > h1 {
-		text-align: center;
+		line-height: 2.1rem;
 	}
 	header .subhead {
 		margin: 0 auto;

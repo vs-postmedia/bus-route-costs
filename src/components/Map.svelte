@@ -17,8 +17,11 @@
     let searchQuery = '';
     let filteredRoutes = [];
     let showDropdown = false;
+    let selectedRoute = null;
 
     const mapZoom = 9;
+    const LineOpacityDim = 0;
+    const LineOpacityFull = 1;
     const searchResultLimit = 5;
     const lineColour = '#0062A3';
     const MAP_STYLE = `https://api.maptiler.com/maps/dataviz/style.json?key=${apiKey}`;
@@ -117,9 +120,50 @@
     /*
     ** FUNCTIONS
     */
+    function getRouteColour(cost_per_rider) {
+        const cost = Number(cost_per_rider);
+        let routeColor = colorScale[0];
+
+        if (costBuckets.length > 0) {
+            if (cost >= costBuckets[3]) {
+                routeColor = colorScale[4];
+            } else if (cost >= costBuckets[2]) {
+                routeColor = colorScale[3];
+            } else if (cost >= costBuckets[1]) {
+                routeColor = colorScale[2];
+            } else if (cost >= costBuckets[0]) {
+                routeColor = colorScale[1];
+            }
+        }
+        
+        return routeColor;
+    }
+
+    function showFixedPopup(popupContainer) {
+        // Add fixed popup to container instead of map
+        const fixedPopupWrapper = document.createElement('div');
+        fixedPopupWrapper.className = 'fixed-popup-container';
+        
+        const closeButton = document.createElement('button');
+        closeButton.className = 'fixed-popup-close';
+        closeButton.innerHTML = '×';
+        
+        closeButton.onclick = () => {
+            fixedPopupWrapper.remove();
+            selectedRoute = null;
+            if (map && map.getLayer('bus-routes-layer')) {
+                map.setPaintProperty('bus-routes-layer', 'line-opacity', LineOpacityFull);
+            }
+        };
+
+        fixedPopupWrapper.appendChild(closeButton);
+        fixedPopupWrapper.appendChild(popupContainer);
+
+        document.querySelector('.container').appendChild(fixedPopupWrapper);
+    };
 
     // Function to show popup for a route when searched via searchbar
-    function showRoutePopup(feature) {
+    function searchRoutes(feature) {
         if (!map || !feature) return;
 
         // Get the center of the route's coordinates
@@ -130,8 +174,20 @@
 
         const { route_short_name, route_long_name, cost_per_rider } = feature.properties;
 
-        // Create a container for the Svelte component
+        // store selected route
+        selectedRoute = route_short_name;
+        
+        // highlight selected route
+        map.setPaintProperty('bus-routes-layer', 'line-opacity', [
+            'case',
+            ['==', ['get', 'route_short_name'], route_short_name],
+            LineOpacityFull,
+            LineOpacityDim
+        ]);
+
+        // Container for the popup component
         const popupContainer = document.createElement('div');
+        popupContainer.className = 'fixed-popup';
 
         // Mount the tooltip
         new MapTooltip({
@@ -139,7 +195,8 @@
             props: {
                 route_short_name: route_short_name,
                 route_long_name: route_long_name,
-                cost_per_rider: `$${cost_per_rider}`
+                cost_per_rider: `$${cost_per_rider}`,
+                route_color: getRouteColour(cost_per_rider)
             }
         });
 
@@ -148,17 +205,29 @@
             popup.remove();
         }
 
-        popup = new Maplibregl.Popup({ closeButton: true })
-            .setLngLat(coordinates)
-            .setDOMContent(popupContainer)
-            .addTo(map);
+        // show popup
+        showFixedPopup(popupContainer);
+
+        // show popup
+        // popup = new Maplibregl.Popup({ closeButton: true })
+        //     .setLngLat(coordinates)
+        //     .setDOMContent(popupContainer)
+        //     .addTo(map);
+
+        // // reset opacity on close
+        // popup.on('close', () => {
+        //     selectedRoute = null;
+        //     if (map && map.getLayer('bus-routes-layer')) {
+        //         map.setPaintProperty('bus-routes-layer', 'line-opacity', LineOpacityFull);
+        //     }
+        // });
 
         // Fly to the route
-        map.flyTo({
-            center: coordinates,
-            zoom: 13,
-            duration: 1000
-        });
+        // map.flyTo({
+        //     center: coordinates,
+        //     zoom: 13,
+        //     duration: 1000
+        // });
 
         // Clear search
         searchQuery = '';
@@ -175,6 +244,13 @@
             pitch: 30,
             bearing: 0
         });
+
+        map.addControl(new Maplibregl.NavigationControl({
+            visualizePitch: true,
+            visualizeRoll: true,
+            showZoom: true,
+            showCompass: true
+        }));
 
 
         map.on('load', () => {
@@ -211,6 +287,9 @@
 
         // Function to create and show popup
         const showPopup = (e) => {
+            // Disble hover if route is selectd in search
+            if (selectedRoute) return;
+
             // Change cursor to pointer on hover
             map.getCanvas().style.cursor = 'pointer';
 
@@ -226,7 +305,8 @@
                 props: {
                     route_short_name: route_short_name,
                     route_long_name: route_long_name,
-                    cost_per_rider: `$${cost_per_rider}`
+                    cost_per_rider: `$${cost_per_rider}`,
+                    route_color: getRouteColour(cost_per_rider)
                 }
             });
 
@@ -252,7 +332,7 @@
             // Change cursor back on leave
             map.getCanvas().style.cursor = '';
             
-            if (popup) {
+            if (popup && !selectedRoute) {
                 popup.remove();
                 popup = null;
             }
@@ -268,6 +348,7 @@
 </script>
 
 <div class="container">
+    <!-- SEARCH BOX -->
     <div class="search-container">
         <input
             type="text"
@@ -280,7 +361,7 @@
                 {#each filteredRoutes as route}
                     <button 
                         class="dropdown-item"
-                        on:click={() => showRoutePopup(route)}
+                        on:click={() => searchRoutes(route)}
                     >
                         <strong>{route.properties.route_short_name}</strong> - {route.properties.route_long_name}
                     </button>
@@ -288,6 +369,8 @@
             </div>
         {/if}
     </div>
+
+    <!-- MAP -->
     <div bind:this={mapContainer} class="map"></div>
 </div>
 
@@ -324,12 +407,13 @@
         font-size: 1.2rem;
     }
 
-     .search-container {
+    /* SEARCH BAR */
+    .search-container {
         position: absolute;
         top: 10px;
         left: 10px;
         z-index: 1;
-        width: 300px;
+        width: 175px;
     }
 
     .search-input {
@@ -378,5 +462,43 @@
 
     .dropdown-item strong {
         color: #0062A3;
+    }
+
+    /* FIXED POPUP */
+    :global(.fixed-popup-container) {
+        position: absolute;
+        top: 10px;
+        right: 50px;
+        z-index: 2;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+        max-width: 250px;
+    }
+
+     :global(.fixed-popup-close) {
+        position: absolute;
+        top: 4px;
+        right: 8px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        font-weight: 800;
+        color: #FFF;
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        line-height: 20px;
+        font-weight: 300;
+        z-index: 5;
+    }
+
+    .fixed-popup-close:hover {
+        color: #231F20;
+    }
+
+    .fixed-popup {
+        /* padding-right: 20px; */
     }
 </style>

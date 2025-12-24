@@ -2,13 +2,13 @@
     export let route_short_name;
     export let route_long_name;
     export let cost_per_rider;
-    // export let routeColor;
+    export let route_color;
 </script>
 
 <div class="popup-content">
-    <h3 class="tooltip-head">Bus: {route_short_name}</h3>
+    <h3 class="tooltip-head" style="background-color: {route_color};">Bus: {route_short_name}</h3>
     <p class="tooltip-subhead">{route_long_name}</p>
-    <p class="tooltip-text">Cost per rider: {cost_per_rider}</p>
+    <p class="tooltip-text">Average cost per passenger: {cost_per_rider}</p>
 </div>
 
 <style>
@@ -39,7 +39,6 @@
     }
 
     .tooltip-text {
-        /* color: var(--black); */
         font-size: 1rem;
         padding: 0 4px 8px 4px;
     }
