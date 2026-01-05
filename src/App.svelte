@@ -37,7 +37,7 @@
 
 <header>
     <h1>Average cost per passenger to operate TransLink bus routes.</h1>
-    <p class="subhead"></p>
+    <p class="subhead">Search for or select a route for details.</p>
 </header>
 
 <main>
@@ -62,7 +62,7 @@
     @import '$css/app.css';
 
     header {
-		margin-bottom: 2rem;
+		margin-bottom: 0.5rem;
 	}
 	header > h1 {
 		line-height: 2.1rem;
@@ -70,7 +70,6 @@
 	header .subhead {
 		margin: 0 auto;
 		max-width: 525px;
-		text-align: center;
 	}
 
     /* COMBOBOX SELECTOR */
